@@ -55,4 +55,52 @@ Không thêm `.venv/`, `data/`, `work/`, Secrets, hay file trọng số vào Git
 
 Chỉ đánh dấu thí nghiệm hoàn tất khi có số liệu từ lần chạy thật. Bạn tự commit/push sau từng mốc; chưa làm E5.
 
+## Checkpoint 2 — E0 zero-shot
+
+Đã triển khai mã E0; **chưa có kết quả GPU/dữ liệu thật để xác nhận E0 hoàn tất**.
+Kiểm chứng cục bộ ngày 14/10/2026: **93 passed, 1 skipped**, bao gồm kiểm tra
+cắt prompt khi batch có left padding, tiếp tục sau lỗi giữa chừng, bảo toàn output thô,
+phát hiện sai cấu hình resume và chấm bằng scorer gốc trên dữ liệu giả lập.
+Các test tensor chạy CPU với torch; nếu môi trường cục bộ chưa có torch, nhóm này được skip.
+Colab đã có torch nên phải chạy được nhóm test này. JSON notebook, cú pháp cell và `git diff --check` hợp lệ.
+`student/inference.py` nạp NF4 4-bit, giữ vision và lm_head ngoài lượng tử hoá,
+kiểm tra cây module/tham số và 220 token ảnh, rồi suy luận batch với left padding.
+Đầu ra giữ nguyên chuỗi model trả về, không sửa JSON trước khi chấm.
+
+### Chạy trên Colab
+
+1. Tự commit/push mã Checkpoint 2. Clone mới hoặc `git pull --ff-only` để lấy phiên bản đó; restart runtime nếu đã import mã cũ.
+2. Chạy phần môi trường/dữ liệu của Checkpoint 1 nếu dùng runtime mới. Cần dữ liệu đã chuẩn bị và Drive đã mount.
+3. Chạy phần **Checkpoint 2** trong mục `## 3. E0`: nạp model rồi chạy 40 ảnh val đầu tiên.
+4. Đọc năm output thô và bộ đếm triệu chứng. Đối chiếu ảnh/GT để phân biệt JSON hỏng, sai lớp, sai thang và bịa box. Bộ đếm tự động chỉ phản ánh triệu chứng.
+5. Sau khi kiểm tra val, chạy toàn bộ 311 ảnh test. Scorer gốc tạo `report/evidence/e0.json` sau khi xác nhận đủ ID test.
+6. Tải `checkpoint2.zip`, gửi zip và log để kiểm chứng; đưa riêng `e0.json` đã chấm thật về thư mục `report/evidence/` trong repo của bạn.
+
+Output và `.run.json` được sao lưu Drive sau mỗi batch. Khi Colab ngắt, chạy lại cùng nhãn,
+prompt, model revision và cấu hình; các ảnh đã lưu không bị suy luận lại.
+Nếu cấu hình thay đổi, runner từ chối trộn kết quả; chọn `E0_RUN_LABEL` mới.
+Nếu OOM, restart runtime, đặt batch 1 và nhãn `e0_b1`, kiểm tra trên val trước khi chạy test.
+Không chỉnh cấu hình/prompt theo điểm test. Không chấm 40 ảnh val như bằng chứng test.
+
+### Kiểm tra và commit
+
+```bash
+.venv/bin/python -m pytest -q tests student/tests
+git add lab_day10.ipynb student/
+# Chỉ chạy dòng này sau khi lấy file chấm thật từ Colab:
+git add report/evidence/e0.json
+git diff --cached --stat
+git commit -m "feat: checkpoint 2 zero-shot inference and scoring"
+git push
+```
+
+Mã E0 cần được push trước để Colab lấy được; có thể commit bằng chứng thật riêng sau khi chạy.
+Tiêu chí hoàn tất mốc: đủ 311 dự đoán test, `missing_predictions = 0`, `split = test`,
+dataset version khớp split chuẩn, có parse valid rate/F1/CI95 thật và năm output thô.
+E0 có thể có chất lượng thấp; ngưỡng parse 95% và tăng F1 0,10 áp dụng cho E1.
+
+Tham khảo API chính thức:
+[Qwen3-VL](https://huggingface.co/docs/transformers/model_doc/qwen3_vl),
+[bitsandbytes](https://huggingface.co/docs/transformers/quantization/bitsandbytes).
+
 Lưu ý khi hoàn thiện báo cáo: một test gốc yêu cầu còn placeholder `<điền` trong `REPORT.md`, nhưng checker nộp bài yêu cầu xoá placeholder. Khi đến Checkpoint 6, giữ nguyên test và ghi rõ xung đột; báo cáo cuối phải được điền đầy đủ.
