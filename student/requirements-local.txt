@@ -1,0 +1,4 @@
+# CPU-only dependencies for checking the data helpers and original lab tools.
+pytest
+pillow
+pyyaml
